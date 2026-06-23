@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Sala dos Professores</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Crimson+Pro:ital@1&display=swap');
+
+  :root{
+    --bg-0:#0b0e10; --bg-1:#11161a;
+    --amber:#ffb347; --amber-dim:#7a5a26;
+    --green:#7ddc8c;
+    --grey-line:#2a3338; --text-soft:#aab4ba; --text-bright:#f2efe6; --red:#e2614f;
+    --gold:#e8c468;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;width:100%;}
+  body{
+    background: var(--bg-0);
+    background-image: radial-gradient(circle at 50% -10%, rgba(255,179,71,.05), transparent 55%);
+    color: var(--text-bright); font-family:'Inter',sans-serif;
+    height:100vh; width:100vw; overflow:hidden;
+  }
+
+  .shell{ display:flex; flex-direction:column; height:100vh; width:100vw; padding: 1.8vh 2vw; }
+
+  /* ===== TOPBAR (sempre visível) ===== */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom: 1px solid var(--grey-line); padding-bottom: 1.2vh; margin-bottom:1.6vh; flex-shrink:0;
+  }
+  .brand{ display:flex; align-items:center; gap:1vw; }
+  .brand .dot{
+    width:.9vw; height:.9vw; max-width:14px; max-height:14px; border-radius:50%; background: var(--green);
+    box-shadow: 0 0 10px var(--green); animation: pulse 2.4s infinite ease-in-out; flex-shrink:0;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  .brand h1{ font-family:'Archivo Black',sans-serif; font-size: 2vh; margin:0; color: var(--text-bright); white-space:nowrap;}
+  .brand .sub{ font-size:1.2vh; color: var(--text-soft); letter-spacing:2px; text-transform:uppercase; margin-top:2px; white-space:nowrap;}
+
+  .topbar-right{ display:flex; align-items:center; gap:2vw; }
+  .weather-mini{ display:flex; align-items:center; gap:.6vw; }
+  .weather-mini .ico{ font-size:2.6vh; }
+  .weather-mini .temp{ font-family:'Space Mono',monospace; font-size:2.2vh; font-weight:700; color: var(--text-bright); }
+  .weather-mini .loc{ font-size:1vh; color: var(--text-soft); text-transform:uppercase; letter-spacing:1px; }
+
+  .clock-date{ text-align:right; }
+  .clock{
+    font-family:'Space Mono',monospace; font-weight:700; font-size: 3.6vh; color: var(--amber);
+    letter-spacing:1px; line-height:1; text-shadow: 0 0 18px rgba(255,179,71,.35);
+  }
+  .clock .secs{ color: var(--amber-dim); font-size:2vh; }
+  .date-line{ font-size:1.3vh; color: var(--text-soft); margin-top:.3vh; text-transform:capitalize; }
+
+  /* ===== STAGE: única tela, tabela completa de horários ===== */
+  .stage{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+
+  .grid-card{
+    width: 92vw; max-width:1500px; height: 82vh;
+    display:flex; flex-direction:column;
+  }
+  .grid-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:1.4vh; flex-shrink:0; }
+  .grid-card-title{ font-family:'Archivo Black',sans-serif; font-size:2.6vh; color: var(--text-bright); }
+  .grid-card-title .hl{ color: var(--amber); }
+  .grid-card-day{ font-size:1.5vh; color: var(--text-soft); text-transform:capitalize; }
+
+  .turnos-wrap{ flex:1; display:flex; flex-direction:column; gap:1.6vh; min-height:0; }
+  .turno-section{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .turno-section-head{
+    font-size:1.3vh; letter-spacing:2.5px; text-transform:uppercase; color: var(--amber);
+    display:flex; align-items:center; gap:10px; margin-bottom:.8vh; flex-shrink:0;
+  }
+  .turno-section-head::after{ content:""; flex:1; height:1px; background: var(--amber-dim); opacity:.4;}
+
+  .ptable{ flex:1; display:grid; grid-template-columns: 5.5vw repeat(5, 1fr); grid-template-rows: auto 1fr 1fr 1fr 1fr 1fr; gap:.5vh .6vw; min-height:0; }
+  .ptable .head-cell{
+    font-size:1.15vh; color: var(--text-soft); text-transform:uppercase; letter-spacing:.5px;
+    display:flex; align-items:center; justify-content:center; gap:.3vw; padding:.4vh 0;
+  }
+  .ptable .period-cell{
+    font-family:'Space Mono',monospace; font-weight:700; color: var(--amber); font-size:1.5vh;
+    display:flex; align-items:center; justify-content:center; background: rgba(255,179,71,.07); border-radius:6px;
+  }
+  .ptable .cell{
+    background: var(--bg-1); border:1px solid var(--grey-line); border-radius:7px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:.3vh .4vw; min-height:0; overflow:hidden; transition: background .3s, border-color .3s;
+  }
+  .ptable .cell.live{ border-color: var(--amber-dim); background: linear-gradient(180deg, rgba(255,179,71,.13), var(--bg-1)); box-shadow: 0 0 0 1px rgba(255,179,71,.3) inset; }
+  .ptable .cell .prof{ font-size:1.25vh; font-weight:700; color: var(--text-bright); line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ptable .cell .prof.vazio{ color: var(--text-soft); font-style:italic; font-weight:400; font-size:1.1vh; }
+  .ptable .cell .blk{ color: var(--red); font-size:1.05vh; font-weight:700; }
+  .ptable .cell .tagnow{ font-size:.85vh; color: var(--green); margin-top:.2vh; letter-spacing:.5px; text-transform:uppercase; }
+  .ptable .cell .tagnow::before{ content:"● "; }
+
+  .board-empty{ flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1.4vh; color: var(--text-soft); font-size:2vh; }
+  .board-empty .big{ font-size:5vh; }
+
+  /* ===== Versículo do dia (canto, decorativo) ===== */
+  .verse-corner{
+    position:absolute; bottom:1.6vh; left:1.8vw; max-width:30vw; z-index:4;
+    background: rgba(22,28,32,.85); border:1px solid var(--grey-line); border-radius:12px; padding:1.2vh 1.4vw;
+    font-family:'Crimson Pro', serif; font-style:italic; font-size:1.3vh; color: var(--text-soft); line-height:1.4;
+  }
+  .verse-corner .ref{ font-family:'Space Mono',monospace; font-style:normal; color: var(--gold); font-size:1.05vh; margin-top:.4vh; text-align:right;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <h1>Mural de Horários</h1>
+        <div class="sub">Painel ao vivo</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="weather-mini">
+        <span class="ico" id="w-icon">⛅</span>
+        <div>
+          <div class="temp" id="w-temp">--°C</div>
+          <div class="loc">Belo Horizonte</div>
+        </div>
+      </div>
+      <div class="clock-date">
+        <div class="clock" id="clock">--:--<span class="secs">:--</span></div>
+        <div class="date-line" id="date-line">carregando data...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <!-- a tabela completa de horários é injetada aqui e atualizada em tempo real -->
+  </div>
+
+  <div class="verse-corner">
+    <span id="verse-text"></span>
+    <div class="ref" id="verse-ref"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCi62yDjL4ayE3JoCP-m8dDpyEb1jIiZis",
+  authDomain: "agendamento-escolar-86843.firebaseapp.com",
+  projectId: "agendamento-escolar-86843",
+  storageBucket: "agendamento-escolar-86843.firebasestorage.app",
+  messagingSenderId: "339474137748",
+  appId: "1:339474137748:web:94412cb05e597f7e9cea81"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const reservasCol = collection(db, "reservas");
+const statusCol = collection(db, "status");
+
+const RESOURCES = [
+  {id:'informatica', label:'Informática', icon:'💻'},
+  {id:'tablets', label:'Tablets', icon:'📱'},
+  {id:'tela', label:'Tela Interativa', icon:'🖥️'},
+  {id:'biblioteca', label:'Biblioteca', icon:'📚'},
+  {id:'video', label:'Sala de Vídeo', icon:'🎬'},
+];
+const DAY_NAMES = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const TIME_TABLE = {
+  'Manhã': [
+    {periodo:1, start:'07:00', end:'07:50'}, {periodo:2, start:'07:50', end:'08:40'},
+    {periodo:3, start:'08:40', end:'09:30'}, {periodo:4, start:'09:50', end:'10:40'},
+    {periodo:5, start:'10:40', end:'11:30'},
+  ],
+  'Tarde': [
+    {periodo:1, start:'13:00', end:'13:50'}, {periodo:2, start:'13:50', end:'14:40'},
+    {periodo:3, start:'14:40', end:'15:30'}, {periodo:4, start:'15:50', end:'16:40'},
+    {periodo:5, start:'16:40', end:'17:30'},
+  ]
+};
+
+let reservations = {};
+let statuses = {};
+
+function pad(n){ return n.toString().padStart(2,'0'); }
+function timeToMinutes(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').innerHTML =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}<span class="secs">:${pad(now.getSeconds())}</span>`;
+  document.getElementById('date-line').textContent =
+    now.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function currentWeekdayName(now){ return DAY_NAMES[now.getDay()]; }
+function classifySlot(turno, periodo, now){
+  const slot = TIME_TABLE[turno]?.find(s=>s.periodo===periodo);
+  if(!slot) return 'done';
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const start = timeToMinutes(slot.start), end = timeToMinutes(slot.end);
+  if(nowMin >= start && nowMin < end) return 'now';
+  if(nowMin < start) return 'next';
+  return 'done';
+}
+
+/* ========== TELA ÚNICA: PAINEL COMPLETO DE HORÁRIOS ========== */
+function renderGridScreen(){
+  const now = new Date();
+  const todayName = currentWeekdayName(now);
+
+  if(todayName === 'Domingo' || todayName === 'Sábado'){
+    return `<div class="grid-card"><div class="board-empty"><span class="big">🌤️</span>Não há aulas hoje. Bom descanso!</div></div>`;
+  }
+
+  let turnosHtml = '';
+  ['Manhã','Tarde'].forEach(turno=>{
+    let cellsHtml = `<div class="head-cell"></div>`;
+    RESOURCES.forEach(r=> cellsHtml += `<div class="head-cell">${r.icon} ${r.label}</div>`);
+
+    TIME_TABLE[turno].forEach(slot=>{
+      cellsHtml += `<div class="period-cell">${slot.periodo}º</div>`;
+      RESOURCES.forEach(resource=>{
+        const st = statuses[resource.id];
+        const key = `${resource.id}__${todayName}__${turno}__${slot.periodo}`;
+        const res = reservations[key];
+        const state = classifySlot(turno, slot.periodo, now);
+        const blocked = !!(st && st.blocked);
+        let inner;
+        if(blocked) inner = `<span class="blk">🚫 indisponível</span>`;
+        else if(res) inner = `<span class="prof">${escapeHtml(res.professor)}</span>${state==='now' ? '<span class="tagnow">agora</span>' : ''}`;
+        else inner = `<span class="prof vazio">Livre</span>`;
+        cellsHtml += `<div class="cell ${state==='now' && res ? 'live':''}">${inner}</div>`;
+      });
+    });
+
+    turnosHtml += `<div class="turno-section">
+      <div class="turno-section-head">${turno}</div>
+      <div class="ptable">${cellsHtml}</div>
+    </div>`;
+  });
+
+  return `<div class="grid-card">
+    <div class="grid-card-head">
+      <div class="grid-card-title">Painel de <span class="hl">Horários</span> — todos os recursos</div>
+      <div class="grid-card-day">Hoje é ${todayName}-feira</div>
+    </div>
+    <div class="turnos-wrap">${turnosHtml}</div>
+  </div>`;
+}
+
+function render(){
+  document.getElementById('stage').innerHTML = renderGridScreen();
+}
+
+onSnapshot(reservasCol, (snap)=>{
+  reservations = {};
+  snap.forEach(d=>{ reservations[d.id] = d.data(); });
+  render();
+});
+onSnapshot(statusCol, (snap)=>{
+  statuses = {};
+  snap.forEach(d=>{ statuses[d.id] = d.data(); });
+  render();
+});
+
+render();
+// re-renderiza periodicamente para atualizar o destaque "agora" conforme o relógio avança,
+// mesmo sem nenhuma mudança nos dados
+setInterval(render, 30000);
+
+/* ========== VERSÍCULO DO DIA ========== */
+const VERSES = [
+  {text:"Tudo posso naquele que me fortalece.", ref:"Filipenses 4:13"},
+  {text:"O Senhor é a minha força e o meu escudo; nele o meu coração confia.", ref:"Salmos 28:7"},
+  {text:"Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus.", ref:"Isaías 41:10"},
+  {text:"Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.", ref:"1 Pedro 5:7"},
+  {text:"Os que esperam no Senhor renovam as suas forças, sobem com asas como águias.", ref:"Isaías 40:31"},
+  {text:"Tudo o que fizerem, façam de todo o coração, como para o Senhor.", ref:"Colossenses 3:23"},
+  {text:"Confia ao Senhor todas as suas obras, e os teus pensamentos serão bem-sucedidos.", ref:"Provérbios 16:3"},
+  {text:"O Senhor te guardará de todo o mal; ele guardará a tua alma.", ref:"Salmos 121:7"},
+  {text:"Sejam fortes e corajosos; o Senhor, vosso Deus, será convosco.", ref:"Josué 1:9"},
+  {text:"Entrega o teu caminho ao Senhor, confia nele, e ele tudo fará.", ref:"Salmos 37:5"},
+  {text:"A alegria do Senhor é a nossa força.", ref:"Neemias 8:10"},
+  {text:"Não se turbe o vosso coração; credes em Deus, credes também em mim.", ref:"João 14:1"},
+  {text:"Os planos do Senhor para vocês são de paz e não de mal.", ref:"Jeremias 29:11"},
+  {text:"Em tudo dai graças, porque esta é a vontade de Deus para vocês.", ref:"1 Tessalonicenses 5:18"},
+  {text:"Ensina a criança no caminho em que deve andar.", ref:"Provérbios 22:6"},
+  {text:"O Senhor te abençoe e te guarde.", ref:"Números 6:24"},
+  {text:"Vinde a mim, todos os que estais cansados, e eu vos aliviarei.", ref:"Mateus 11:28"},
+  {text:"Como o ferro afia o ferro, assim o homem afia o seu próximo.", ref:"Provérbios 27:17"},
+  {text:"Que a paz de Deus, que excede todo entendimento, guarde seu coração.", ref:"Filipenses 4:7"},
+  {text:"Quem semeia com lágrimas, com alegria há de colher.", ref:"Salmos 126:5"},
+  {text:"Tudo coopera para o bem daqueles que amam a Deus.", ref:"Romanos 8:28"},
+  {text:"Sede fortes e tenha coragem; não temais nem vos atemorizeis.", ref:"Deuteronômio 31:6"},
+  {text:"O Senhor é bom para com os que esperam por ele, para a alma que o busca.", ref:"Lamentações 3:25"},
+];
+(function renderVerse(){
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - startOfYear) / 86400000);
+  const verse = VERSES[dayOfYear % VERSES.length];
+  document.getElementById('verse-text').textContent = `"${verse.text}"`;
+  document.getElementById('verse-ref').textContent = verse.ref;
+})();
+
+/* ========== CLIMA (Open-Meteo, Belo Horizonte) ========== */
+const LAT = -19.9167, LON = -43.9345;
+const WEATHER_MAP = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',
+  61:'🌧️',63:'🌧️',65:'⛈️',71:'🌨️',73:'🌨️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️',
+};
+async function loadWeather(){
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code&timezone=America%2FSao_Paulo`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    document.getElementById('w-icon').textContent = WEATHER_MAP[data.current.weather_code] || '⛅';
+    document.getElementById('w-temp').textContent = `${Math.round(data.current.temperature_2m)}°C`;
+  }catch(e){ console.error('Erro ao buscar clima', e); }
+}
+loadWeather();
+setInterval(loadWeather, 15*60*1000);
+</script>
+</body>
+</html>
